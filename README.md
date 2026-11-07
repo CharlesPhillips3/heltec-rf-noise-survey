@@ -32,6 +32,9 @@ Full control page: [docs/screenshots/control-full.png](docs/screenshots/control-
 
 You need a **computer** with Chrome or Edge. An iPhone can't flash USB devices.
 
+**Use it online:** open **https://charlesphillips3.github.io/heltec-rf-noise-survey/** in Chrome or Edge. It's the same flasher with the newest firmware built in, updated automatically on every build. Then skip to step 3.
+
+**Or use it offline:**
 1. On GitHub, open this repo → **Releases** (right side) → newest **Firmware build** → download **`heltec-flasher.html`**. It has that build's firmware **built in**.
 2. **Double-click** it so it opens in Chrome or Edge.
 3. Plug the Heltec into the computer with a **data** USB-C cable. Windows may need the **CP210x** driver from Silicon Labs if no port appears.
@@ -39,7 +42,7 @@ You need a **computer** with Chrome or Edge. An iPhone can't flash USB devices.
    If it won't connect, hold **PRG**, tap **RST**, release **PRG**, then click Connect again, or pick a lower speed. Coming from Meshtastic or other firmware? Tick **Erase everything first**.
 5. The OLED shows *RF Survey 902-928*, then *Floor … Med …*. The first boot takes a little longer while it formats log storage.
 
-**Flasher board tools:** **Download survey log** copies the CSV straight off the board over USB. **Back up board** saves a full 8 MB copy of whatever is on the board, such as Meshtastic, so you can restore it later by choosing that .bin and installing it.
+**Flasher board tools:** **Download survey log** copies the CSV straight off the board over USB and opens the **analysis report** on screen (map, GO stations, noisiest spots, spectrum, waterfall); **Save report** makes a single HTML file to share. **Analyze survey…** opens any saved CSV. **Back up board** saves a full 8 MB copy of whatever is on the board, such as Meshtastic, so you can restore it later by choosing that .bin and installing it.
 
 *Alternative:* Espressif's own web flasher, **https://espressif.github.io/esptool-js/**. Connect, enter Flash Address **0x0**, choose the `.bin`, and click Program.
 

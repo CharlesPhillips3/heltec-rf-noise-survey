@@ -13,6 +13,8 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 jobs:
   build:
@@ -63,6 +65,16 @@ jobs:
           print(name, len(fw), "bytes embedded")
           EOF
 
+      - name: Prepare the online flasher (GitHub Pages)
+        run: |
+          mkdir -p _site
+          cp heltec-flasher.html _site/index.html
+          touch _site/.nojekyll
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
       - uses: actions/upload-artifact@v4
         with:
           name: heltec-rf-survey-firmware
@@ -86,3 +98,15 @@ jobs:
             **Easiest:** download **heltec-flasher.html**. It has this firmware built in.
             Open it in Chrome or Edge on a computer → Connect → Install firmware.
             (heltec-rf-survey-merged.bin is the same firmware on its own, for flashing at 0x0 with any ESP flasher.)
+
+  # Publishes the flasher (with this firmware built in) at
+  # https://charlesphillips3.github.io/heltec-rf-noise-survey/
+  pages:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4
