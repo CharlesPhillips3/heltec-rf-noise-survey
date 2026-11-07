@@ -1,0 +1,88 @@
+name: Build firmware
+
+# Builds the Heltec V3 firmware and publishes ONE ready-to-flash file
+# (heltec-rf-survey-merged.bin, flash at address 0x0) as a GitHub Release.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "firmware/**"
+      - "flasher/**"
+      - ".github/workflows/build.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: pio-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
+
+      - name: Install PlatformIO and esptool
+        run: pip install -U platformio "esptool>=4.7,<5"
+
+      - name: Compile
+        working-directory: firmware
+        run: pio run -e heltec_v3
+
+      - name: Merge bootloader + partitions + app into one file
+        working-directory: firmware
+        run: |
+          B=.pio/build/heltec_v3
+          BOOT_APP0=$(find ~/.platformio/packages/framework-arduinoespressif32 -name boot_app0.bin | head -1)
+          echo "boot_app0: $BOOT_APP0"
+          python -m esptool --chip esp32s3 merge_bin -o "$B/heltec-rf-survey-merged.bin" \
+            --flash_mode keep --flash_freq keep --flash_size 8MB \
+            0x0 "$B/bootloader.bin" 0x8000 "$B/partitions.bin" 0xe000 "$BOOT_APP0" 0x10000 "$B/firmware.bin"
+          ls -l "$B"/*.bin
+
+      - name: Build heltec-flasher.html with this firmware built in
+        env:
+          RUN: ${{ github.run_number }}
+          SHA: ${{ github.sha }}
+        run: |
+          python3 - <<'EOF'
+          import base64, os, datetime
+          fw = open("firmware/.pio/build/heltec_v3/heltec-rf-survey-merged.bin", "rb").read()
+          html = open("flasher/index.html", encoding="utf-8").read()
+          name = "Firmware build %s (%s, %s)" % (os.environ["RUN"], os.environ["SHA"][:7], datetime.date.today().isoformat())
+          assert "/*EMBEDDED_FW_B64*/" in html and "/*EMBEDDED_FW_NAME*/" in html
+          html = html.replace("/*EMBEDDED_FW_B64*/", base64.b64encode(fw).decode()).replace("/*EMBEDDED_FW_NAME*/", name)
+          open("heltec-flasher.html", "w", encoding="utf-8").write(html)
+          print(name, len(fw), "bytes embedded")
+          EOF
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: heltec-rf-survey-firmware
+          path: |
+            firmware/.pio/build/heltec_v3/heltec-rf-survey-merged.bin
+            firmware/.pio/build/heltec_v3/firmware.bin
+            heltec-flasher.html
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: fw-build-${{ github.run_number }}
+          name: Firmware build ${{ github.run_number }}
+          make_latest: true
+          files: |
+            heltec-flasher.html
+            firmware/.pio/build/heltec_v3/heltec-rf-survey-merged.bin
+          body: |
+            Ready-to-flash firmware for the Heltec WiFi LoRa 32 V3 (commit ${{ github.sha }}).
+
+            **Easiest:** download **heltec-flasher.html**. It has this firmware built in.
+            Open it in Chrome or Edge on a computer → Connect → Install firmware.
+            (heltec-rf-survey-merged.bin is the same firmware on its own, for flashing at 0x0 with any ESP flasher.)

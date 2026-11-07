@@ -1,0 +1,46 @@
+name: Screenshots
+
+# Re-generates the README screenshots (simulated board + GPS, no real device or location).
+# Run it from the Actions tab ("Run workflow"), or it runs when the script changes.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "docs/make-screenshots.js"
+      - ".github/workflows/screenshots.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  shots:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Playwright + Chromium
+        run: |
+          npm init -y >/dev/null
+          npm install playwright@1.47.2
+          npx playwright install --with-deps chromium
+
+      - name: Get the newest release's flasher (firmware built in)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download --repo ${{ github.repository }} --pattern heltec-flasher.html --dir release || echo "no release flasher, using flasher/index.html"
+
+      - name: Take screenshots
+        run: node docs/make-screenshots.js
+
+      - name: Commit screenshots
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/screenshots/*.png
+          git diff --cached --quiet && echo "no changes" || git commit -m "Update README screenshots"
+          git push

@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Heltec V3 RF Survey · Flasher</title>
+<style>
+:root{--bg:#0e1116;--panel:#161b22;--line:#2a313c;--text:#e6edf3;--mute:#8b949e;--accent:#4c9aff;--ok:#3fb950;--bad:#f85149;--warn:#d29922}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+main{max-width:760px;margin:0 auto;padding:18px}
+h1{font-size:21px;margin:4px 0 2px}
+.sub{color:var(--mute);font-size:13px;margin-bottom:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:14px}
+.step{display:flex;gap:12px;align-items:flex-start}
+.num{flex:0 0 28px;height:28px;border-radius:50%;background:#1f2630;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
+.num.done{background:var(--ok);border-color:var(--ok);color:#0e1116}
+.body{flex:1;min-width:0}
+.body h3{margin:2px 0 6px;font-size:15px}
+.body p{margin:0 0 8px;color:var(--mute);font-size:13px}
+button{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:10px 14px;font:inherit;font-weight:600;cursor:pointer}
+button.ghost{background:#1f2630;color:var(--text);border:1px solid var(--line)}
+button.big{font-size:17px;padding:13px 20px}
+button:disabled{opacity:.4;cursor:default}
+label.file{display:inline-flex;align-items:center;gap:10px;background:#1f2630;border:1px dashed #3a4350;border-radius:8px;padding:10px 12px;cursor:pointer;max-width:100%}
+label.file input{display:none}
+label.file span{color:var(--mute);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.pill{font-size:12px;padding:3px 8px;border-radius:20px;background:#1f2630;color:var(--mute)}
+.pill.ok{background:rgba(63,185,80,.15);color:var(--ok)}
+.pill.bad{background:rgba(248,81,73,.15);color:var(--bad)}
+select{background:#0e1116;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px}
+.opt{font-size:13px;color:var(--mute);display:flex;align-items:center;gap:6px}
+.bar{height:12px;background:#0b0e13;border-radius:6px;overflow:hidden;margin:10px 0 4px}
+.bar>div{height:100%;width:0;background:linear-gradient(90deg,#2f6fde,#4c9aff);transition:width .2s}
+.num{font-size:13px}
+#pct{font-size:13px;color:var(--mute)}
+pre{background:#0b0e13;border-radius:8px;padding:10px;font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#c9d1d9;height:220px;overflow:auto;white-space:pre-wrap;word-break:break-all;margin:8px 0 0}
+.banner{border-radius:10px;padding:14px;margin-bottom:14px;font-size:14px}
+.banner.bad{background:rgba(248,81,73,.12);border:1px solid rgba(248,81,73,.4)}
+.banner.ok{background:rgba(63,185,80,.12);border:1px solid rgba(63,185,80,.4)}
+.banner b{display:block;margin-bottom:4px}
+a{color:var(--accent)}
+.hidden{display:none}
+.small{font-size:12px;color:var(--mute)}
+/* analysis report */
+#report{max-width:1100px;margin:0 auto;padding:0 18px 30px}
+#report h2{font-size:14px;margin:0 0 8px;color:var(--mute);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+#report .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+#report .tile{background:#1f2630;border-radius:8px;padding:10px}
+#report .tile span{display:block;color:var(--mute);font-size:12px}
+#report .tile b{font-size:19px;font-variant-numeric:tabular-nums}
+#report table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+#report th,#report td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+#report th{color:var(--mute);font-weight:600;font-size:12px}
+#report canvas{display:block;width:100%;height:260px;border-radius:8px;background:#0b0e13}
+#report #wf{height:300px}
+#report .legend{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--mute);margin-top:8px}
+#amap{height:520px;border-radius:8px;background:#0b0e13}
+@media print{body>main{display:none}#report .noprint{display:none}#report .card{break-inside:avoid}}
+</style></head>
+<body><main>
+<h1>Heltec V3 RF Survey · Flasher</h1>
+<div class="sub">Installs the 902–928 MHz survey firmware on a Heltec WiFi LoRa 32 V3 straight from this page. It needs Chrome or Edge on a Windows, Mac, Linux or ChromeOS computer.</div>
+
+<div id="noSerial" class="banner bad hidden"></div>
+<div id="getApp" class="card hidden">
+  <h3 style="margin:0 0 6px;font-size:15px">Download the flasher to your computer</h3>
+  <p class="small" style="margin:0 0 10px">Pages inside Claude aren't allowed to use USB. Save the flasher as a file, then <b>double-click heltec-flasher.html</b>. It opens in your browser with USB access and works the same way. Make sure it opens in Chrome or Edge; if not, right-click → Open with → Chrome. Keep the file for future updates.</p>
+  <button id="btnGetApp">Download flasher (heltec-flasher.html)</button> <span class="small" id="getMsg"></span>
+</div>
+
+<div class="card">
+  <div class="step"><div class="num" id="n1">1</div><div class="body">
+    <h3>Firmware</h3>
+    <p id="fwHelp">From your GitHub repo: <b>heltec-rf-survey → Releases → newest “Firmware build” → heltec-rf-survey-merged.bin</b>.</p>
+    <div class="row">
+      <label class="file"><input type="file" id="fBin" accept=".bin,application/octet-stream"><b>Choose .bin</b><span id="binName">nothing selected</span></label>
+      <span class="pill" id="binInfo"></span>
+    </div>
+  </div></div>
+</div>
+
+<div class="card">
+  <div class="step"><div class="num" id="n2">2</div><div class="body">
+    <h3>Connect the Heltec</h3>
+    <p>Plug it in with a <b>data</b> USB-C cable, click Connect, and pick <b>CP2102 / USB to UART</b> (Windows: COMx · Mac: cu.usbserial / SLAB_USBtoUART). No port listed? Install the Silicon Labs CP210x driver, or try another cable.</p>
+    <div class="row">
+      <button id="btnConnect">Connect</button>
+      <span class="pill" id="chipInfo">not connected</span>
+      <label class="opt"><input type="checkbox" id="allPorts"> Show all serial ports</label>
+      <label class="opt">Speed <select id="baud"><option value="921600">921600 (fast)</option><option value="460800">460800</option><option value="115200">115200 (safest)</option></select></label>
+    </div>
+    <p class="small" style="margin-top:8px">Won't connect? Hold <b>PRG</b>, tap <b>RST</b>, release <b>PRG</b>, then click Connect again. “No compatible devices found”? Tick <b>Show all serial ports</b>. If the list is still empty, the computer can't see the board: try another USB-C cable (many are charge-only) or another USB port.</p>
+  </div></div>
+</div>
+
+<div class="card">
+  <div class="step"><div class="num" id="n3">3</div><div class="body">
+    <h3>Install</h3>
+    <label class="opt"><input type="checkbox" id="eraseAll"> Erase everything first (also deletes survey logs stored on the board; use if it misbehaves after an update)</label>
+    <div class="row" style="margin-top:10px">
+      <button class="big" id="btnFlash" disabled>Install firmware</button>
+      <span class="pill" id="flashState">waiting</span>
+    </div>
+    <div class="bar"><div id="barFill"></div></div>
+    <div id="pct"></div>
+  </div></div>
+</div>
+
+<div class="card">
+  <div class="step"><div class="num">⚙</div><div class="body">
+    <h3>Board tools</h3>
+    <p><b>Download survey log</b> copies the survey CSV off a board that's running the survey firmware (no Bluetooth or Wi-Fi needed). A full log takes up to about a minute.</p>
+    <p><b>Analyze survey</b> shows the full report on this screen: street map, GO stations, noisiest spots, spectrum, waterfall and timeline. It opens automatically after a log download, or you can pick any survey CSV (from this flasher, the Bluefy page's Save CSV, or the board's Wi-Fi page). <b>Save report</b> makes one HTML file you can email.</p>
+    <p><b>Back up board</b> saves a complete copy of everything on the board (8 MB: its current firmware, settings and logs) as a .bin. Do this before installing if you might want the old firmware back. Restore it later by choosing that .bin in step 1 and installing it. Takes about 2 minutes.</p>
+    <div class="row">
+      <button class="ghost" id="btnDump">Download survey log</button>
+      <button class="ghost" id="btnBackup">Back up board (8 MB)</button>
+      <button id="btnAnalyze">Analyze survey…</button>
+      <span class="pill" id="toolState">idle</span>
+    </div>
+    <div class="bar"><div id="toolFill"></div></div>
+  </div></div>
+</div>
+
+<div id="doneBanner" class="banner ok hidden"><b>Done. The Heltec is restarting with the new firmware.</b>
+The OLED should show <i>RF Survey 902-928</i>, then <i>Floor … Med …</i>. The board's startup messages appear below. On the first boot after an erase, setting up log storage takes a little longer.</div>
+
+<div class="card">
+  <div class="row" style="justify-content:space-between">
+    <h3 style="margin:0;font-size:15px">Log</h3>
+    <div class="row">
+      <button class="ghost" id="btnMonitor" disabled>Serial monitor</button>
+      <button class="ghost" id="btnCopy">Copy log</button>
+    </div>
+  </div>
+  <pre id="log"></pre>
+</div>
+
+<div class="small">Uses Espressif's open-source <a href="https://github.com/espressif/esptool-js" target="_blank" rel="noopener">esptool-js</a>. The firmware only receives; it never transmits.</div>
+</main>
+
+<section id="report" class="hidden">
+  <div class="card noprint">
+    <div class="row" style="justify-content:space-between">
+      <h3 style="margin:0;font-size:17px">Survey analysis</h3>
+      <div class="row">
+        <button id="aSave">Save report (HTML)</button>
+        <button class="ghost" id="aPrint">Print / PDF</button>
+        <button class="ghost" id="aClose">Close</button>
+      </div>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <label class="file"><input type="file" id="aCsv" accept=".csv,text/csv,text/plain"><b>Open a CSV…</b></label>
+      <label class="file"><input type="file" id="aGpx" accept=".gpx,application/gpx+xml,text/xml,application/xml"><b>GPX</b><span id="aGpxName">optional</span></label>
+      <label class="opt">Time shift (s) <input type="number" id="aShift" value="0" step="1" style="width:70px;background:#0e1116;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px"></label>
+    </div>
+    <div class="small" id="aStatus" style="margin-top:8px"></div>
+  </div>
+  <div class="card"><h2>Summary</h2><div class="tiles" id="tiles"></div></div>
+  <div class="card"><h2>Map · colored by noise floor (P20) · ■ = GO station</h2><div id="amap"></div></div>
+  <div class="card" id="stnCard">
+    <h2>GO stations · parked baselines</h2>
+    <table><thead><tr><th>Stn</th><th>Label</th><th>Time</th><th>Dwell</th><th>Floor</th><th>Median</th><th>Peak</th><th>Busy</th><th>Location</th></tr></thead><tbody id="stns"></tbody></table>
+    <canvas id="stspec" style="margin-top:12px"></canvas>
+    <div class="legend" id="stLegend"></div>
+    <div class="small" style="margin-top:6px">Mean spectrum at each stop. Click a row to highlight it and zoom the map to it.</div>
+  </div>
+  <div class="card"><h2>Noisiest drive spots</h2>
+    <table><thead><tr><th>#</th><th>Time</th><th>Floor</th><th>Median</th><th>Peak</th><th>Busy</th><th>Location</th></tr></thead><tbody id="worst"></tbody></table></div>
+  <div class="card"><h2>Spectrum over the survey</h2><canvas id="spec"></canvas>
+    <div class="legend"><span style="color:#f85149">━ max hold</span><span style="color:#4c9aff">━ power average</span><span style="color:#8b949e">━ minimum</span></div></div>
+  <div class="card"><h2>Waterfall · frequency vs time</h2><canvas id="wf"></canvas></div>
+  <div class="card"><h2>Noise floor over time</h2><canvas id="tl"></canvas>
+    <div class="legend"><span style="color:#f85149">━ peak</span><span style="color:#d29922">━ median</span><span style="color:#4c9aff">━ floor P20</span><span>┊ MARK</span></div></div>
+  <div class="small">Readings are relative and uncalibrated. Compare spots against each other and against baseline stations taken with the same antenna setup.</div>
+</section>
+
+<!-- Built-in firmware: the GitHub build fills these in for heltec-flasher.html on the Releases page -->
+<script data-own id="fwB64" type="text/plain">/*EMBEDDED_FW_B64*/</script>
+<script data-own id="fwName" type="text/plain">/*EMBEDDED_FW_NAME*/</script>
+<script data-own src="https://cdnjs.cloudflare.com/ajax/libs/spark-md5/3.0.2/spark-md5.min.js"></script>
+<script data-own type="module">
+const $ = id => document.getElementById(id);
+const logEl = $("log");
+function log(s) { logEl.textContent += s; logEl.scrollTop = logEl.scrollHeight; }
+function line(s) { log(s + "\n"); }
+
+// ------------------------------------------------ environment check
+const SELF_HTML = (() => {   // pristine copy of this page, for the "download flasher" button
+  const d = document.documentElement.cloneNode(true);
+  d.querySelectorAll("script:not([data-own])").forEach(x => x.remove());
+  return "<!DOCTYPE html>\n" + d.outerHTML;
+})();
+const policyBlocked = (() => {
+  try {
+    const pp = document.permissionsPolicy || document.featurePolicy;
+    return !!(pp && pp.allowsFeature && !pp.allowsFeature("serial"));
+  } catch (e) { return false; }
+})();
+const serialOK = ("serial" in navigator) && !policyBlocked;
+if (!serialOK) {
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
+  const inFrame = window.top !== window.self;
+  $("noSerial").classList.remove("hidden");
+  $("noSerial").innerHTML = ios
+    ? "<b>This needs a computer.</b>iPhone and iPad browsers can't talk to USB devices. Open this page in Chrome or Edge on a Windows, Mac, Linux or ChromeOS computer."
+    : (inFrame || policyBlocked)
+      ? "<b>USB access is blocked inside this page.</b>Use the download button below, then open the downloaded file in Chrome or Edge on this computer. (It's also in the GitHub repo as flasher/index.html.)"
+      : "<b>This browser can't access USB serial ports.</b>Use Google Chrome or Microsoft Edge on a computer. Firefox and Safari don't support it.";
+  $("btnConnect").disabled = true;
+  if (!ios && (inFrame || policyBlocked)) setupDownload();
+}
+
+async function setupDownload() {
+  let downloads = null;
+  try { if (window.claude && window.claude.use) downloads = await window.claude.use("downloads"); } catch (e) {}
+  if (!downloads) return;
+  $("getApp").classList.remove("hidden");
+  $("btnGetApp").onclick = async () => {
+    try { await downloads.save({ filename: "heltec-flasher.html", data: SELF_HTML }); $("getMsg").textContent = "Saved. Now open it from your Downloads folder."; }
+    catch (e) { $("getMsg").textContent = e && e.code === "declined" ? "Cancelled." : "Couldn't save: " + (e && (e.message || e.code)); }
+  };
+}
+
+// ------------------------------------------------ esptool-js (loaded lazily)
+let lib = null;
+async function loadLib() {
+  if (lib) return lib;
+  line("Loading flasher library…");
+  lib = await import("https://unpkg.com/esptool-js@0.6.1/bundle.js");
+  return lib;
+}
+
+let fw = null;          // {data: Uint8Array, address, kind}
+// USB-serial chips used on ESP32 boards: Silicon Labs CP210x, Espressif native USB, WCH CH340/CH9102, FTDI
+const USB_FILTERS = [{ usbVendorId: 0x10c4 }, { usbVendorId: 0x303a }, { usbVendorId: 0x1a86 }, { usbVendorId: 0x0403 }];
+function pickPort() { return navigator.serial.requestPort($("allPorts").checked ? {} : { filters: USB_FILTERS }); }
+let port = null, transport = null, loader = null, chipName = "";
+let monitorStop = null;
+
+const terminal = { clean() {}, writeLine(d) { line(d); }, write(d) { log(d); } };
+
+// ------------------------------------------------ firmware file
+$("fBin").onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  useFirmware(new Uint8Array(await f.arrayBuffer()), f.name);
+};
+function useFirmware(data, name) {
+  $("binName").textContent = `${name} · ${(data.length/1024).toFixed(0)} KB`;
+  const info = $("binInfo");
+  if (data.length < 64*1024 || data[0] !== 0xE9) {
+    fw = null; info.className = "pill bad"; info.textContent = "not an ESP32 firmware image";
+  } else if (data.length > 0x8001 && data[0x8000] === 0xAA && data[0x8001] === 0x50) {
+    fw = {data, address: 0x0, kind: "merged"}; info.className = "pill ok"; info.textContent = "complete image → 0x0";
+  } else {
+    fw = {data, address: 0x10000, kind: "app"}; info.className = "pill ok"; info.textContent = "app-only image → 0x10000";
+    line("Note: this looks like firmware.bin (app only). It will be written at 0x10000. Use the merged .bin for a first install.");
+  }
+  $("n1").classList.toggle("done", !!fw);
+  updateButtons();
+}
+// built-in firmware (present in the heltec-flasher.html attached to each GitHub release)
+(() => {
+  const b64 = ($("fwB64").textContent || "").trim();
+  if (!b64 || b64.startsWith("/*")) return;
+  try {
+    const bin = atob(b64), data = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) data[i] = bin.charCodeAt(i);
+    const nm = ($("fwName").textContent || "").trim();
+    useFirmware(data, "built-in: " + nm);
+    $("fwHelp").innerHTML = "<b>This flasher already contains " + nm + ".</b> Just Connect and Install. (To install something else, choose a .bin.)";
+    $("fBin").parentElement.querySelector("b").textContent = "Choose a different .bin";
+  } catch (e) { line("Built-in firmware could not be read: " + e.message); }
+})();
+
+function updateButtons() {
+  $("btnFlash").disabled = !(fw && loader);
+  $("btnMonitor").disabled = !port;
+}
+
+// ------------------------------------------------ connect
+$("btnConnect").onclick = () => doConnect();
+async function doConnect() {
+  try {
+    await stopMonitor();
+    if (transport) { try { await transport.disconnect(); } catch (e) {} transport = null; loader = null; }
+    port = await pickPort();                     // ask for the port first, while the click is fresh
+    const { ESPLoader, Transport } = await loadLib();
+    transport = new Transport(port, false);
+    loader = new ESPLoader({ transport, baudrate: +$("baud").value, terminal, debugLogging: false });
+    $("chipInfo").className = "pill"; $("chipInfo").textContent = "connecting…";
+    line("\nConnecting…");
+    chipName = await loader.main();
+    const isS3 = /ESP32-S3/i.test(chipName);
+    $("chipInfo").className = isS3 ? "pill ok" : "pill bad";
+    $("chipInfo").textContent = isS3 ? chipName + " ✓" : chipName + " (not a Heltec V3?)";
+    if (!isS3) line("Warning: the Heltec WiFi LoRa 32 V3 uses an ESP32-S3. This board reports " + chipName + ".");
+    $("n2").classList.add("done");
+  } catch (e) {
+    if (e && e.name === "NotFoundError") { line("No port selected. If the list said “No compatible devices found”, tick Show all serial ports and try again; if it's still empty, try another USB-C cable or port."); }
+    else if (e && e.name === "SecurityError") { line("USB access is blocked in this page. Download the flasher file and open it directly in Chrome or Edge."); }
+    else { line("Connect failed: " + (e && e.message || e)); line("Try: hold PRG, tap RST, release PRG, then Connect. Or pick a lower speed."); }
+    $("chipInfo").className = "pill bad"; $("chipInfo").textContent = "not connected";
+    loader = null;
+  }
+  updateButtons();
+  return !!loader;
+}
+
+// ------------------------------------------------ flash
+$("btnFlash").onclick = async () => {
+  if (!fw || !loader) return;
+  const btns = ["btnFlash", "btnConnect", "btnMonitor"]; btns.forEach(b => $(b).disabled = true);
+  $("doneBanner").classList.add("hidden");
+  const st = $("flashState"); st.className = "pill"; st.textContent = "working…";
+  const fill = $("barFill"), pct = $("pct");
+  try {
+    if ($("eraseAll").checked) { st.textContent = "erasing…"; line("Erasing entire flash (about 20–40 s)…"); }
+    const t0 = performance.now();
+    await loader.writeFlash({
+      fileArray: [{ data: fw.data, address: fw.address }],
+      flashSize: "keep", flashMode: "keep", flashFreq: "keep",
+      eraseAll: $("eraseAll").checked, compress: true,
+      calculateMD5Hash: img => window.SparkMD5.ArrayBuffer.hash(img.buffer.slice(img.byteOffset, img.byteOffset + img.byteLength)),
+      reportProgress: (i, written, total) => {
+        const p = total ? written/total*100 : 0;
+        fill.style.width = p.toFixed(1) + "%"; pct.textContent = `Writing ${p.toFixed(0)}% · ${(written/1024).toFixed(0)} / ${(total/1024).toFixed(0)} KB`;
+        st.textContent = "writing…";
+      },
+    });
+    line(`Written and verified in ${((performance.now() - t0)/1000).toFixed(1)} s.`);
+    fill.style.width = "100%"; pct.textContent = "Complete";
+    st.className = "pill ok"; st.textContent = "installed ✓"; $("n3").classList.add("done");
+    line("Restarting the board…");
+    await loader.after("hard_reset");
+    try { await transport.disconnect(); } catch (e) {}
+    transport = null; loader = null;
+    $("chipInfo").className = "pill"; $("chipInfo").textContent = "restarted";
+    $("doneBanner").classList.remove("hidden");
+    await startMonitor();
+  } catch (e) {
+    st.className = "pill bad"; st.textContent = "failed";
+    line("Flashing failed: " + (e && e.message || e));
+    line("Unplug the board, plug it back in, click Connect and try again (a lower speed often helps).");
+  }
+  $("btnConnect").disabled = !serialOK; updateButtons();
+};
+
+// ------------------------------------------------ serial reading that survives line glitches
+// A board reset can put a "break" on the USB serial line. Chrome reports it as an error and swaps in a
+// fresh stream; we just pick up the new stream and carry on. One read is kept pending at a time so no
+// data is lost when we stop waiting for it.
+function serialReader(port) {
+  let reader = port.readable.getReader(), pending = null;
+  const SOFT = /^(BreakError|FramingError|ParityError|BufferOverrunError)$/;
+  return {
+    async read(ms) {
+      if (!pending) pending = reader.read().then(r => ({ r }), e => ({ e }));
+      const res = ms ? await Promise.race([pending, new Promise(ok => setTimeout(() => ok(null), ms))]) : await pending;
+      if (!res) return { value: null, done: false };
+      pending = null;
+      if (res.e) {
+        if (SOFT.test(res.e.name) && port.readable) { try { reader.releaseLock(); } catch (e) {} reader = port.readable.getReader(); return { value: null, done: false }; }
+        throw res.e;
+      }
+      return res.r;
+    },
+    async close() { try { await reader.cancel(); } catch (e) {} try { reader.releaseLock(); } catch (e) {} }
+  };
+}
+
+// ------------------------------------------------ serial monitor
+async function startMonitor() {
+  if (!port || monitorStop) return;
+  try {
+    await port.open({ baudRate: 921600 });
+  } catch (e) { if (!/already open/i.test(e.message)) { line("Monitor: " + e.message); return; } }
+  // pulse RTS to reset so the boot log is captured
+  try { await port.setSignals({ dataTerminalReady: false, requestToSend: true }); await new Promise(r => setTimeout(r, 120)); await port.setSignals({ dataTerminalReady: false, requestToSend: false }); } catch (e) {}
+  line("\n--- serial monitor (921600) ---");
+  $("btnMonitor").textContent = "Stop monitor";
+  const reader = serialReader(port); const dec = new TextDecoder();
+  let stop = false;
+  monitorStop = async () => { stop = true; await reader.close(); try { await port.close(); } catch (e) {} monitorStop = null; $("btnMonitor").textContent = "Serial monitor"; line("--- monitor stopped ---"); };
+  (async () => {
+    try { while (!stop) { const { value, done } = await reader.read(); if (done) break; if (value) log(dec.decode(value, { stream: true })); } }
+    catch (e) { if (!stop) line("\nMonitor ended: " + e.message); }
+  })();
+}
+async function stopMonitor() { if (monitorStop) await monitorStop(); }
+$("btnMonitor").onclick = async () => {
+  if (monitorStop) await stopMonitor();
+  else { if (transport) { try { await transport.disconnect(); } catch (e) {} transport = null; loader = null; $("chipInfo").textContent = "monitor mode"; } await startMonitor(); }
+  updateButtons();
+};
+
+// ------------------------------------------------ board tools
+function toolProgress(p, text) { $("toolFill").style.width = (p*100).toFixed(1) + "%"; $("toolState").className = "pill"; $("toolState").textContent = text; }
+function toolDone(ok, text) { $("toolState").className = ok ? "pill ok" : "pill bad"; $("toolState").textContent = text; }
+function saveBlob(data, name, type) {
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([data], {type})); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+}
+const stamp = () => new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-");
+function setTools(busy) { ["btnDump", "btnBackup", "btnFlash", "btnConnect", "btnMonitor"].forEach(b => $(b).disabled = busy); if (!busy) { $("btnConnect").disabled = !serialOK; updateButtons(); } }
+
+// Explain a failed log download from what the board did say on USB
+function dumpHint(heard) {
+  const txt = heard.replace(/[^\x20-\x7e\n]/g, "").trim();
+  const tail = txt.split("\n").map(s => s.trim()).filter(Boolean).slice(-4).join(" | ").slice(-240);
+  if (!txt) return "the board sent nothing at all. Check that this is the board's port (CP210x / USB to UART), that the cable carries data, and that the board is powered (screen on). Then unplug it, plug it back in and try again.";
+  if (/waiting for download|DOWNLOAD\(/i.test(txt)) return "the board is stuck in download mode. Tap RST on the board (don't hold PRG) and try again. Board said: " + tail;
+  if (/meshtastic/i.test(txt)) return "the board is running Meshtastic, not the survey firmware. Install the survey firmware first. Board said: " + tail;
+  if (/LittleFS|radio\.beginFSK|RF.?Survey/i.test(txt)) return "the board is running an older survey firmware that has no USB log download. Click Install (built-in firmware): your survey log stays on the board unless you tick Erase everything. Then try again. Board said: " + tail;
+  return "the board answered but not with a survey log, so it's probably running other firmware. Install the survey firmware and try again. Board said: " + tail;
+}
+
+// Download the survey log from a board running the survey firmware (USB serial "DUMP" command)
+$("btnDump").onclick = async () => {
+  if (!serialOK) return;
+  setTools(true);
+  let reader = null, writer = null;
+  try {
+    await stopMonitor();
+    if (transport) { try { await transport.disconnect(); } catch (e) {} transport = null; loader = null; $("chipInfo").textContent = "not connected"; }
+    if (!port) port = await pickPort();
+    await port.open({ baudRate: 921600, bufferSize: 1 << 20 });
+    // restart the board into its normal program (it may still be in download mode after Connect/Install)
+    try { await port.setSignals({ dataTerminalReady: false, requestToSend: true }); await new Promise(r => setTimeout(r, 120)); await port.setSignals({ dataTerminalReady: false, requestToSend: false }); } catch (e) {}
+    reader = serialReader(port); writer = port.writable.getWriter();
+    toolProgress(0, "asking the board…");
+    line("\nDownloading survey log (the board may restart first, that's fine)…");
+    const HDR = "<<<RFSURVEY-DUMP ";
+    let text = "", heard = "", size = -1, out = null, got = 0, t0 = Date.now(), lastAsk = 0;
+    const dec = new TextDecoder("latin1");
+    while (true) {
+      if (size < 0 && Date.now() - lastAsk > 1500) { lastAsk = Date.now(); await writer.write(new TextEncoder().encode("\nDUMP\n")); }
+      if (size < 0 && Date.now() - t0 > 25000) throw new Error(dumpHint(heard));
+      const { value, done } = await reader.read(500);
+      if (done) throw new Error("port closed");
+      if (!value) continue;
+      if (size < 0) {
+        const start = text.length; text += dec.decode(value);
+        if (heard.length < 20000) heard += dec.decode(value);
+        const i = text.indexOf(HDR);
+        if (i >= 0) {
+          const j = text.indexOf(">>>\n", i);
+          if (j < 0) { continue; }
+          size = parseInt(text.slice(i + HDR.length, j), 10);
+          out = new Uint8Array(size);
+          const bodyStart = j + 4;                    // latin1: 1 char = 1 byte
+          const rest = value.subarray(Math.max(0, bodyStart - start));
+          const n = Math.min(rest.length, size); out.set(rest.subarray(0, n), 0); got = n;
+          line(`Board log is ${(size/1024).toFixed(0)} KB…`);
+        } else if (text.length > 200000) text = text.slice(-1000);
+      } else {
+        const n = Math.min(value.length, size - got); out.set(value.subarray(0, n), got); got += n;
+      }
+      if (size >= 0) {
+        toolProgress(size ? got/size : 1, `downloading ${(got/1024).toFixed(0)} / ${(size/1024).toFixed(0)} KB`);
+        if (got >= size) break;
+      }
+    }
+    if (!size) { toolDone(false, "log is empty"); line("The board's log is empty."); }
+    else {
+      const name = `rfsurvey_board_${stamp()}.csv`;
+      saveBlob(out, name, "text/csv");
+      toolDone(true, "saved ✓"); line(`Saved ${name} (${(size/1024).toFixed(0)} KB). Opening the analysis report below…`);
+      window.__lastLog = { text: new TextDecoder().decode(out), name };
+      if (window.RFAnalysis) window.RFAnalysis.open(window.__lastLog.text, name);
+    }
+  } catch (e) {
+    toolDone(false, "failed"); line("Log download failed: " + (e && e.message || e));
+  } finally {
+    if (reader) await reader.close();
+    try { writer && writer.releaseLock(); } catch (e) {} try { await port.close(); } catch (e) {}
+    setTools(false);
+  }
+};
+
+// Full 8 MB flash backup (works with any firmware: uses the chip's bootloader)
+$("btnBackup").onclick = async () => {
+  if (!serialOK) return;
+  setTools(true);
+  try {
+    if (!loader) { line("\nConnecting for backup…"); if (!(await doConnect())) throw new Error("not connected"); }
+    setTools(true);
+    const total = 8 * 1024 * 1024, CH = 256 * 1024, out = new Uint8Array(total);
+    line(`Reading ${total/1048576} MB from the board…`);
+    const t0 = performance.now();
+    for (let a = 0; a < total; a += CH) {
+      const d = await loader.readFlash(a, CH, (pkt, got) => toolProgress((a + got)/total, `reading ${((a + got)/1048576).toFixed(1)} / 8 MB`));
+      out.set(d.subarray(0, CH), a);
+    }
+    const name = `heltec-backup_${(chipName || "esp32").replace(/[^A-Za-z0-9-]/g, "")}_${stamp()}.bin`;
+    saveBlob(out, name, "application/octet-stream");
+    toolDone(true, "saved ✓");
+    line(`Backup saved: ${name} (${((performance.now() - t0)/1000).toFixed(0)} s). To restore it, choose this .bin in step 1 and Install.`);
+  } catch (e) {
+    toolDone(false, "failed"); line("Backup failed: " + (e && e.message || e) + ". Try a lower speed, then Connect and Back up again.");
+  } finally { setTools(false); }
+};
+
+$("btnCopy").onclick = async () => { try { await navigator.clipboard.writeText(logEl.textContent); $("btnCopy").textContent = "Copied"; setTimeout(() => $("btnCopy").textContent = "Copy log", 1500); } catch (e) {} };
+
+if (serialOK) line("Ready. Choose the .bin, then Connect.");
+</script>
+<script data-own>
+// =====================================================================
+//  Survey analysis report (same analysis as the RF Survey Viewer app)
+// =====================================================================
+window.RFAnalysis = (() => {
+"use strict";
+const $ = id => document.getElementById(id);
+let S = null, amap = null, csvText = null, gpxText = null, srcLabel = "";
+
+// ------------------------------------------------------------ parsing
+function parseLog(text) {
+  let header = null; const rows = [], syncs = {}, marks = [], stn = {};
+  for (let line of text.split(/\r?\n/)) {
+    line = line.trim(); if (!line) continue;
+    if (line.startsWith("#SYNC,")) {
+      const p = line.split(","); const b = +p[1];
+      (syncs[b] = syncs[b] || []).push([+p[2], +p[3]]); continue;
+    }
+    if (line.startsWith("#MARK,")) {
+      const p = line.split(","); const note = p.slice(4).join(",");
+      marks.push({boot:+p[1], millis:+p[2], utc_ms:+(p[3]||0), note}); continue;
+    }
+    if (line.startsWith("#STATION,")) {
+      const p = line.split(","); if (p.length < 15) continue;
+      const key = p[1] + ":" + p[2];
+      stn[key] = Object.assign(stn[key] || {}, {boot:+p[1], id:+p[2], start_ms:+p[3], end_ms:+p[4],
+        start_utc:+(p[5] || 0), end_utc:+(p[6] || 0), sweeps:+p[7], floor:+p[8], median:+p[9], peak:+p[10],
+        pmhz:+p[11], busy:+p[12], early:p[13] === "1", note:p.slice(14).join(",")});
+      continue;
+    }
+    const sm = line.match(/^#STATION_(MEAN|MIN|MAX),/);
+    if (sm) {
+      const p = line.split(","), key = p[1] + ":" + p[2];
+      (stn[key] = stn[key] || {})[sm[1].toLowerCase()] = p.slice(3).map(Number); continue;
+    }
+    if (line.startsWith("#")) continue;
+    if (line.startsWith("boot,")) { header = line.split(","); continue; }
+    if (!header) continue;
+    const v = line.split(",");
+    if (v.length !== header.length) continue;
+    const r = {}; header.forEach((h, i) => r[h] = v[i]); rows.push(r);
+  }
+  if (!header) throw new Error("No header row found — is this a RF-Survey CSV from the Heltec?");
+  const fcols = header.filter(h => /^f\d+(\.\d+)?$/.test(h));
+  const freqs = fcols.map(h => +h.slice(1));
+  const stations = Object.values(stn).filter(s => s.floor != null).sort((a, b) => a.boot - b.boot || a.id - b.id);
+  return {header, fcols, freqs, rows, syncs, marks, stations};
+}
+
+function resolveTimes(L, shift) {
+  const fromSync = (boot, ms) => { const s = L.syncs[boot]; if (!s) return null; const [sm, se] = s[s.length-1]; return se + (ms - sm); };
+  for (const r of L.rows) {
+    const t = r.utc_ms ? +r.utc_ms : fromSync(+r.boot, +r.millis);
+    r._t = t == null ? null : t/1000 + shift;
+  }
+  for (const m of L.marks) {
+    const t = m.utc_ms || fromSync(m.boot, m.millis);
+    m._t = t ? t/1000 + shift : null;
+  }
+  for (const s of L.stations) {
+    const a = s.start_utc || fromSync(s.boot, s.start_ms), b = s.end_utc || fromSync(s.boot, s.end_ms);
+    s._t0 = a ? a/1000 + shift : null; s._t1 = b ? b/1000 + shift : null;
+    s.dur = (s.end_ms - s.start_ms)/1000;
+  }
+}
+
+function parseGpx(text) {
+  const doc = new DOMParser().parseFromString(text, "application/xml");
+  if (doc.getElementsByTagName("parsererror").length) throw new Error("GPX file could not be read");
+  const pts = [];
+  for (const tag of ["trkpt", "rtept"]) {
+    for (const el of doc.getElementsByTagNameNS("*", tag)) {
+      const tEl = el.getElementsByTagNameNS("*", "time")[0];
+      if (!tEl) continue;
+      const t = Date.parse(tEl.textContent.trim());
+      if (isNaN(t)) continue;
+      pts.push([t/1000, +el.getAttribute("lat"), +el.getAttribute("lon")]);
+    }
+  }
+  pts.sort((a, b) => a[0] - b[0]);
+  return pts;
+}
+
+function interp(track, t, maxGap) {
+  if (!track.length || t == null) return null;
+  let lo = 0, hi = track.length;
+  while (lo < hi) { const m = (lo + hi) >> 1; if (track[m][0] < t) lo = m + 1; else hi = m; }
+  const i = lo;
+  if (i < track.length && Math.abs(track[i][0] - t) < 1e-6) return [track[i][1], track[i][2]];
+  if (i === 0 || i === track.length) return null;
+  const [t0, a0, o0] = track[i-1], [t1, a1, o1] = track[i];
+  if (t1 - t0 > maxGap) return null;
+  const k = (t - t0) / (t1 - t0);
+  return [a0 + k*(a1 - a0), o0 + k*(o1 - o0)];
+}
+
+// ------------------------------------------------------------ analysis
+function analyze(csvText, gpxText, shift) {
+  const L = parseLog(csvText);
+  resolveTimes(L, shift);
+  const track = gpxText ? parseGpx(gpxText) : [];
+  const pts = [];
+  for (const r of L.rows) {
+    let pos = null, src = "";
+    if (r.lat) { pos = [+r.lat, +r.lon]; src = "GPS module"; }
+    else if (track.length) { pos = interp(track, r._t, 30); src = pos ? "iPhone GPX" : ""; }
+    if (!pos) continue;
+    pts.push({lat:pos[0], lon:pos[1], t:r._t, src, floor:+r.floor_p20_dbm, median:+r.median_dbm,
+              peak:+r.peak_dbm, pmhz:+r.peak_mhz, busy:+r.busy});
+  }
+  for (const m of L.marks) {
+    let pos = track.length ? interp(track, m._t, 30) : null;
+    if (!pos && m._t) {
+      const near = L.rows.filter(r => r.lat && r._t != null);
+      if (near.length) { const rr = near.reduce((a, b) => Math.abs(b._t - m._t) < Math.abs(a._t - m._t) ? b : a); pos = [+rr.lat, +rr.lon]; }
+    }
+    m.lat = pos ? pos[0] : null; m.lon = pos ? pos[1] : null;
+  }
+  const med = a => { const b = [...a].sort((x, y) => x - y); return b[b.length >> 1]; };
+  for (const s of L.stations) {
+    s.lat = s.lon = null; let cand = [];
+    if (track.length && s._t0 != null) {
+      cand = track.filter(p => p[0] >= s._t0 - 5 && p[0] <= s._t1 + 5).map(p => [p[1], p[2]]);
+      if (!cand.length) { const p = interp(track, (s._t0 + s._t1)/2, 30); if (p) cand = [p]; }
+    }
+    if (!cand.length && s._t0 != null)
+      cand = L.rows.filter(r => r.lat && r._t != null && r._t >= s._t0 - 5 && r._t <= s._t1 + 5).map(r => [+r.lat, +r.lon]);
+    if (cand.length) { s.lat = med(cand.map(c => c[0])); s.lon = med(cand.map(c => c[1])); }
+  }
+  const spec = L.rows.map(r => L.fcols.map(k => +r[k]));
+  let lo = -120, hi = -100;
+  const floorsAll = pts.map(p => p.floor).concat(L.stations.filter(s => s.lat != null).map(s => s.floor));
+  if (floorsAll.length) {
+    const f = floorsAll.sort((a, b) => a - b);
+    lo = f[Math.floor(0.05*(f.length-1))]; hi = f[Math.floor(0.95*(f.length-1))];
+    if (hi - lo < 3) hi = lo + 3;
+  }
+  return {L, track, pts, spec, lo, hi, shift};
+}
+
+// ------------------------------------------------------------ helpers
+function colour(v, lo, hi) {
+  const k = hi <= lo ? 0 : Math.max(0, Math.min(1, (v - lo)/(hi - lo)));
+  const stops = [[46,160,67],[210,153,34],[248,81,73]];
+  const s = k < .5 ? 0 : 1, kk = k < .5 ? k*2 : (k-.5)*2;
+  const c = stops[s].map((x, i) => Math.round(x + (stops[s+1][i] - x)*kk));
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+const fmtT = t => t == null ? "—" : new Date(t*1000).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit", second:"2-digit"});
+const fmtD = t => t == null ? "—" : new Date(t*1000).toLocaleString([], {month:"short", day:"numeric", hour:"2-digit", minute:"2-digit"});
+const gmaps = (lat, lon) => `https://www.google.com/maps/search/?api=1&query=${lat.toFixed(6)},${lon.toFixed(6)}`;
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+function setupCanvas(c) {
+  const dpr = window.devicePixelRatio || 1, w = c.clientWidth, h = c.clientHeight;
+  c.width = Math.round(w*dpr); c.height = Math.round(h*dpr);
+  const g = c.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, w, h); g.font = "11px -apple-system,Segoe UI,sans-serif";
+  return [g, w, h];
+}
+
+function axes(g, w, h, pad, xlo, xhi, ylo, yhi, xfmt, yStep) {
+  g.strokeStyle = "#232a33"; g.fillStyle = "#8b949e"; g.lineWidth = 1;
+  const X = x => pad.l + (x - xlo)/(xhi - xlo)*(w - pad.l - pad.r);
+  const Y = y => h - pad.b - (y - ylo)/(yhi - ylo)*(h - pad.t - pad.b);
+  for (let y = Math.ceil(ylo/yStep)*yStep; y <= yhi; y += yStep) {
+    g.beginPath(); g.moveTo(pad.l, Y(y)); g.lineTo(w - pad.r, Y(y)); g.stroke();
+    g.textAlign = "right"; g.fillText(y.toFixed(0), pad.l - 6, Y(y) + 4);
+  }
+  g.textAlign = "center";
+  const n = Math.max(2, Math.floor((w - pad.l - pad.r)/90));
+  for (let i = 0; i <= n; i++) { const x = xlo + (xhi - xlo)*i/n; g.fillText(xfmt(x), X(x), h - pad.b + 15); }
+  return [X, Y];
+}
+
+
+function renderTiles() {
+  const {L, pts} = S, timed = L.rows.filter(r => r._t != null);
+  const fl = L.rows.map(r => +r.floor_p20_dbm).sort((a, b) => a - b);
+  const med = fl.length ? fl[Math.floor(fl.length/2)] : NaN;
+  const tiles = [
+    ["Log rows", L.rows.length],
+    ["Placed on map", pts.length],
+    ["Channels", `${L.freqs.length} · ${L.freqs[0]}–${L.freqs[L.freqs.length-1]} MHz`],
+    ["Typical floor", isFinite(med) ? med.toFixed(1) + " dBm" : "—"],
+    ["Quietest floor", fl.length ? fl[0].toFixed(1) + " dBm" : "—"],
+    ["Noisiest floor", fl.length ? fl[fl.length-1].toFixed(1) + " dBm" : "—"],
+    ["Survey span", timed.length ? `${fmtD(timed[0]._t)} → ${fmtT(timed[timed.length-1]._t)}` : "clock never synced"],
+    ["GO stations", L.stations.length ? `${L.stations.length} (${L.stations.filter(s => s.lat != null).length} placed)` : "none"],
+    ["Marks", L.marks.length],
+  ];
+  $("tiles").innerHTML = tiles.map(([k, v]) => `<div class="tile"><span>${k}</span><b>${esc(v)}</b></div>`).join("");
+}
+
+
+const STN_COLS = ["#4c9aff","#f0883e","#a371f7","#3fb950","#db61a2","#e3b341","#56d4dd","#ff7b72","#d2a8ff","#7ee787"];
+let hiStn = -1;
+function renderStations() {
+  const st = S.L.stations;
+  $("stnCard").classList.toggle("hidden", !st.length);
+  if (!st.length) return;
+  $("stns").innerHTML = st.map((s, i) => `<tr data-i="${i}" style="cursor:pointer;${i === hiStn ? "background:#1f2630" : ""}">
+    <td><span style="color:${STN_COLS[i % STN_COLS.length]}">■</span> ${s.id}</td><td>${esc(s.note && s.note !== "button" ? s.note : "—")}</td>
+    <td>${fmtT(s._t0)}</td><td>${s.dur.toFixed(0)} s${s.early ? "*" : ""}</td>
+    <td><b style="color:${colour(s.floor, S.lo, S.hi)}">${s.floor.toFixed(1)}</b></td><td>${s.median.toFixed(1)}</td>
+    <td>${s.peak.toFixed(1)} @ ${s.pmhz.toFixed(1)}</td><td>${s.busy}</td>
+    <td>${s.lat != null ? `<a href="${gmaps(s.lat, s.lon)}" target="_blank" rel="noopener">${s.lat.toFixed(5)}, ${s.lon.toFixed(5)} ↗</a>` : "no position"}</td></tr>`).join("");
+  for (const tr of $("stns").querySelectorAll("tr")) tr.onclick = e => {
+    if (e.target.tagName === "A") return;
+    const i = +tr.dataset.i; hiStn = hiStn === i ? -1 : i; renderStations();
+    if (hiStn >= 0 && st[i].lat != null && amap) amap.setView([st[i].lat, st[i].lon], 16);
+  };
+  const c = $("stspec"), [g, w, h] = setupCanvas(c), F = S.L.freqs;
+  const withMean = st.map((s, i) => [s, i]).filter(([s]) => s.mean && s.mean.length === F.length);
+  if (!withMean.length) return;
+  const vals = withMean.flatMap(([s]) => s.mean);
+  const ylo = Math.floor((Math.min(...vals) - 3)/10)*10, yhi = Math.ceil((Math.max(...vals) + 3)/10)*10;
+  const [X, Y] = axes(g, w, h, {l:42, r:10, t:10, b:24}, F[0], F[F.length-1], ylo, yhi, x => x.toFixed(0), 10);
+  const draw = ([s, i]) => {
+    const on = hiStn < 0 || hiStn === i;
+    g.globalAlpha = on ? 1 : .18; g.strokeStyle = STN_COLS[i % STN_COLS.length]; g.lineWidth = hiStn === i ? 2.2 : 1.3;
+    g.beginPath(); s.mean.forEach((v, k) => k ? g.lineTo(X(F[k]), Y(v)) : g.moveTo(X(F[k]), Y(v))); g.stroke();
+  };
+  withMean.filter(([, i]) => i !== hiStn).forEach(draw);
+  withMean.filter(([, i]) => i === hiStn).forEach(draw);
+  g.globalAlpha = 1; g.fillStyle = "#8b949e"; g.textAlign = "left"; g.fillText("dBm", 46, 12); g.textAlign = "right"; g.fillText("MHz", w - 10, h - 4);
+  $("stLegend").innerHTML = withMean.map(([s, i]) => `<span style="color:${STN_COLS[i % STN_COLS.length]}">━ STN ${s.id}${s.note && s.note !== "button" ? " " + esc(s.note) : ""} (${s.floor.toFixed(1)})</span>`).join("");
+}
+
+function renderWorst() {
+  const top = S.pts.map((p, i) => [p, i]).sort((a, b) => b[0].floor - a[0].floor).slice(0, 10);
+  $("worst").innerHTML = top.length ? top.map(([p, i], n) =>
+    `<tr><td>${n+1}</td><td>${fmtT(p.t)}</td><td><b style="color:${colour(p.floor, S.lo, S.hi)}">${p.floor.toFixed(1)}</b></td><td>${p.median.toFixed(1)}</td><td>${p.peak.toFixed(1)} @ ${p.pmhz.toFixed(1)}</td><td>${p.busy}</td><td><a href="${gmaps(p.lat, p.lon)}" target="_blank" rel="noopener">${p.lat.toFixed(5)}, ${p.lon.toFixed(5)} ↗</a></td></tr>`).join("")
+    : `<tr><td colspan="7" style="color:var(--mute)">No geotagged rows.</td></tr>`;
+}
+
+function renderSpec() {
+  const c = $("spec"), [g, w, h] = setupCanvas(c), {spec, L} = S, F = L.freqs;
+  if (!spec.length) return;
+  const n = F.length, avg = [], mx = [], mn = [];
+  for (let i = 0; i < n; i++) {
+    let s = 0, a = -999, b = 999;
+    for (const r of spec) { s += Math.pow(10, r[i]/10); a = Math.max(a, r[i]); b = Math.min(b, r[i]); }
+    avg.push(10*Math.log10(s/spec.length)); mx.push(a); mn.push(b);
+  }
+  const ylo = Math.floor((Math.min(...mn) - 3)/10)*10, yhi = Math.ceil((Math.max(...mx) + 3)/10)*10;
+  const [X, Y] = axes(g, w, h, {l:42, r:10, t:10, b:24}, F[0], F[n-1], ylo, yhi, x => x.toFixed(0), 10);
+  for (const [arr, col, lw] of [[mn, "#8b949e", 1], [mx, "#f85149", 1], [avg, "#4c9aff", 2]]) {
+    g.strokeStyle = col; g.lineWidth = lw; g.beginPath();
+    arr.forEach((v, i) => i ? g.lineTo(X(F[i]), Y(v)) : g.moveTo(X(F[i]), Y(v))); g.stroke();
+  }
+  g.fillStyle = "#8b949e"; g.textAlign = "left"; g.fillText("dBm", 46, 12); g.textAlign = "right"; g.fillText("MHz", w - 10, h - 4);
+}
+
+function viridis(k) {
+  const s = [[68,1,84],[59,82,139],[33,145,140],[94,201,98],[253,231,37]];
+  k = Math.max(0, Math.min(1, k)) * 4; const i = Math.min(3, Math.floor(k)), f = k - i;
+  return s[i].map((x, j) => Math.round(x + (s[i+1][j] - x)*f));
+}
+
+function renderWaterfall() {
+  const c = $("wf"), [g, w, h] = setupCanvas(c), {spec, L} = S;
+  if (!spec.length) return;
+  const pad = {l:42, r:10, t:8, b:24}, iw = Math.max(1, Math.round(w - pad.l - pad.r)), ih = Math.max(1, Math.round(h - pad.t - pad.b));
+  const flat = spec.flat().sort((a, b) => a - b);
+  const vlo = flat[Math.floor(flat.length*.02)], vhi = flat[Math.floor(flat.length*.995)];
+  const off = document.createElement("canvas"); off.width = spec.length; off.height = L.freqs.length;
+  const og = off.getContext("2d"), img = og.createImageData(spec.length, L.freqs.length);
+  spec.forEach((row, x) => row.forEach((v, fi) => {
+    const [r, gg, b] = viridis((v - vlo)/(vhi - vlo)), o = ((L.freqs.length - 1 - fi)*spec.length + x)*4;
+    img.data[o] = r; img.data[o+1] = gg; img.data[o+2] = b; img.data[o+3] = 255;
+  }));
+  og.putImageData(img, 0, 0);
+  g.imageSmoothingEnabled = false; g.drawImage(off, pad.l, pad.t, iw, ih);
+  g.fillStyle = "#8b949e"; g.textAlign = "right";
+  for (const f of [905, 910, 915, 920, 925]) {
+    const y = pad.t + ih - (f - L.freqs[0])/(L.freqs[L.freqs.length-1] - L.freqs[0])*ih; g.fillText(f, pad.l - 6, y + 4);
+  }
+  const rows = L.rows; g.textAlign = "center";
+  for (let i = 0; i <= 4; i++) {
+    const idx = Math.min(rows.length - 1, Math.round((rows.length - 1)*i/4));
+    g.fillText(rows[idx]._t != null ? fmtT(rows[idx]._t).slice(0, 5) : "#" + idx, pad.l + iw*i/4, h - 6);
+  }
+  g.textAlign = "left"; g.fillText(`${vlo.toFixed(0)} → ${vhi.toFixed(0)} dBm`, pad.l + 4, pad.t + 12);
+}
+
+function renderTimeline() {
+  const c = $("tl"), [g, w, h] = setupCanvas(c), rows = S.L.rows;
+  if (!rows.length) return;
+  const timed = rows.every(r => r._t != null);
+  const xs = rows.map((r, i) => timed ? r._t : i);
+  const all = rows.flatMap(r => [+r.peak_dbm, +r.floor_p20_dbm]);
+  const ylo = Math.floor((Math.min(...all) - 3)/10)*10, yhi = Math.ceil((Math.max(...all) + 3)/10)*10;
+  const [X, Y] = axes(g, w, h, {l:42, r:10, t:10, b:24}, xs[0], xs[xs.length-1] || xs[0] + 1, ylo, yhi,
+                      x => timed ? fmtT(x).slice(0, 5) : "#" + Math.round(x), 10);
+  for (const [k, col, lw] of [["peak_dbm", "#f85149", 1], ["median_dbm", "#d29922", 1.3], ["floor_p20_dbm", "#4c9aff", 2]]) {
+    g.strokeStyle = col; g.lineWidth = lw; g.beginPath();
+    rows.forEach((r, i) => i ? g.lineTo(X(xs[i]), Y(+r[k])) : g.moveTo(X(xs[i]), Y(+r[k]))); g.stroke();
+  }
+  if (timed) {
+    g.setLineDash([3, 3]); g.strokeStyle = "#c9d1d9"; g.fillStyle = "#c9d1d9"; g.lineWidth = 1;
+    for (const m of S.L.marks) {
+      if (m._t == null || m._t < xs[0] || m._t > xs[xs.length-1]) continue;
+      const x = X(m._t); g.beginPath(); g.moveTo(x, 10); g.lineTo(x, h - 24); g.stroke();
+      g.save(); g.translate(x + 3, 14); g.rotate(Math.PI/2); g.textAlign = "left"; g.fillText(m.note || "mark", 0, 0); g.restore();
+    }
+    g.setLineDash([]);
+  }
+}
+
+
+// ------------------------------------------------------------ map (Leaflet, real streets)
+function loadLeaflet() {
+  if (window.L) return Promise.resolve();
+  return new Promise((ok, bad) => {
+    const css = document.createElement("link"); css.rel = "stylesheet"; css.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"; document.head.appendChild(css);
+    const s = document.createElement("script"); s.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"; s.onload = ok; s.onerror = () => bad(new Error("map library didn't load (offline?)")); document.head.appendChild(s);
+  });
+}
+function mapData() {
+  return {
+    pts: S.pts.map(p => ({lat: p.lat, lon: p.lon, c: colour(p.floor, S.lo, S.hi), t: fmtD(p.t), f: p.floor.toFixed(1), m: p.median.toFixed(1), p: p.peak.toFixed(1), pf: p.pmhz.toFixed(1), b: p.busy})),
+    stns: S.L.stations.filter(s => s.lat != null).map(s => ({lat: s.lat, lon: s.lon, id: s.id, n: s.note && s.note !== "button" ? s.note : "", c: colour(s.floor, S.lo, S.hi), t: fmtD(s._t0), d: Math.round(s.dur), f: s.floor.toFixed(1), m: s.median.toFixed(1), p: s.peak.toFixed(1), pf: s.pmhz.toFixed(1), b: s.busy})),
+    marks: S.L.marks.filter(m => m.lat != null).map(m => ({lat: m.lat, lon: m.lon, n: m.note || "mark"})),
+    lo: S.lo, hi: S.hi
+  };
+}
+// shared by the live report and the saved HTML report
+const DRAW_MAP = function (L, el, D) {
+  const map = L.map(el);
+  // OpenStreetMap and CARTO refuse pages opened from a file; Esri's basemaps don't
+  const esri = n => "https://server.arcgisonline.com/ArcGIS/rest/services/" + n + "/MapServer/tile/{z}/{y}/{x}";
+  const streets = L.tileLayer(esri("World_Street_Map"), {maxZoom: 19, attribution: "Tiles &copy; Esri"}).addTo(map);
+  const sat = L.tileLayer(esri("World_Imagery"), {maxZoom: 19, attribution: "Imagery &copy; Esri"});
+  L.control.layers({"Streets": streets, "Satellite": sat}, null, {position: "topright"}).addTo(map);
+  const g = L.featureGroup().addTo(map);
+  const e = s => String(s).replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
+  D.pts.forEach(p => L.circleMarker([p.lat, p.lon], {radius: 6, color: p.c, fillColor: p.c, fillOpacity: .85, weight: 1})
+    .bindPopup("<b>" + p.t + "</b><br>Floor (P20): " + p.f + " dBm<br>Median: " + p.m + " dBm<br>Peak: " + p.p + " dBm @ " + p.pf + " MHz<br>Busy ch: " + p.b).addTo(g));
+  D.marks.forEach(m => L.marker([m.lat, m.lon]).bindPopup("<b>MARK</b> " + e(m.n)).addTo(g));
+  D.stns.forEach(s => L.marker([s.lat, s.lon], {icon: L.divIcon({className: "", iconSize: [46, 22], iconAnchor: [23, 11],
+    html: '<div style="background:' + s.c + ';border:2px solid #111;border-radius:5px;font:bold 11px sans-serif;text-align:center;line-height:18px;color:#0b0e13">' + s.f + "</div>"})})
+    .bindPopup("<b>Station " + s.id + "</b> " + e(s.n) + "<br>" + s.t + " · " + s.d + " s baseline<br>Floor (P20): " + s.f + " dBm<br>Median: " + s.m + " dBm<br>Peak: " + s.p + " dBm @ " + s.pf + " MHz<br>Busy ch: " + s.b).addTo(g));
+  if (D.pts.length || D.stns.length) map.fitBounds(g.getBounds().pad(0.1)); else map.setView([39.8, -98.6], 4);
+  const lg = L.control({position: "bottomright"});
+  lg.onAdd = () => { const d = L.DomUtil.create("div"); d.style.cssText = "background:#fff;color:#111;padding:6px 8px;border-radius:6px;font:12px sans-serif;line-height:1.5";
+    d.innerHTML = "<b>Noise floor (P20)</b><br><span style='color:#2ea043'>&#9679;</span> " + D.lo.toFixed(1) + " dBm quiet<br><span style='color:#f85149'>&#9679;</span> " + D.hi.toFixed(1) + " dBm noisy<br><small>■ = GO station</small>"; return d; };
+  lg.addTo(map);
+  return map;
+};
+async function renderMap() {
+  const el = $("amap");
+  if (amap) { amap.remove(); amap = null; }
+  try { await loadLeaflet(); amap = DRAW_MAP(window.L, el, mapData()); }
+  catch (e) { el.innerHTML = '<div style="padding:20px;color:#8b949e">' + esc(e.message) + "</div>"; }
+}
+
+// ------------------------------------------------------------ glue
+function render() {
+  $("report").classList.remove("hidden");
+  renderTiles(); renderStations(); renderWorst(); renderSpec(); renderWaterfall(); renderTimeline(); renderMap();
+}
+function run() {
+  if (!csvText) return;
+  try {
+    S = analyze(csvText, gpxText, +$("aShift").value || 0); hiStn = -1;
+    const L = S.L, timed = L.rows.filter(r => r._t != null).length;
+    let msg = `${srcLabel}: ${L.rows.length} readings, ${S.pts.length} with position` + (L.stations.length ? `, ${L.stations.length} GO stations.` : ".");
+    if (!timed && !L.rows.some(r => r.lat)) msg += " ⚠ No clock/position in this log. Load the GPX track, and next time connect the phone (Bluefy) during the survey.";
+    else if (!S.pts.length && !L.rows.some(r => r.lat)) msg += " Add the GPX track to place readings on the map.";
+    $("aStatus").textContent = msg;
+    render();
+    $("report").scrollIntoView({behavior: "smooth"});
+  } catch (e) { $("aStatus").textContent = "Couldn't analyze: " + e.message; $("report").classList.remove("hidden"); }
+}
+function open(text, label) { csvText = text; gpxText = null; srcLabel = label || "Survey log"; $("aGpxName").textContent = "optional"; run(); }
+
+function saveReport() {
+  if (!S) return;
+  const D = mapData(), img = id => { try { return $(id).toDataURL("image/png"); } catch (e) { return ""; } };
+  const t0 = S.pts.find(p => p.t != null), day = t0 ? new Date(t0.t*1000).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
+  const css = "body{margin:0;background:#0e1116;color:#e6edf3;font:14px/1.45 -apple-system,Segoe UI,Helvetica,Arial,sans-serif}main{max-width:1100px;margin:0 auto;padding:16px}h1{font-size:20px;margin:4px 0}h2{font-size:13px;color:#8b949e;text-transform:uppercase;letter-spacing:.04em;margin:0 0 8px}.card{background:#161b22;border:1px solid #2a313c;border-radius:10px;padding:14px;margin-bottom:14px}.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}.tile{background:#1f2630;border-radius:8px;padding:10px}.tile span{display:block;color:#8b949e;font-size:12px}.tile b{font-size:19px}table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid #2a313c}th{color:#8b949e;font-size:12px}a{color:#4c9aff}img{width:100%;border-radius:8px}#m{height:520px;border-radius:8px}.legend{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;margin-top:6px}.note{color:#8b949e;font-size:12px}@media print{#m{height:420px}.card{break-inside:avoid}}";
+  const stnHead = "<tr><th>Stn</th><th>Label</th><th>Time</th><th>Dwell</th><th>Floor</th><th>Median</th><th>Peak</th><th>Busy</th><th>Location</th></tr>";
+  const worstHead = "<tr><th>#</th><th>Time</th><th>Floor</th><th>Median</th><th>Peak</th><th>Busy</th><th>Location</th></tr>";
+  const html = "<!DOCTYPE html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>RF survey report " + day + "</title>"
+    + "<link rel='stylesheet' href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'><script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'><\/script><style>" + css + "</style></head><body><main>"
+    + "<h1>RF survey report · 902–928 MHz</h1><div class='note'>" + esc($("aStatus").textContent) + " · generated " + new Date().toLocaleString() + "</div><br>"
+    + "<div class='card'><h2>Summary</h2><div class='tiles'>" + $("tiles").innerHTML + "</div></div>"
+    + "<div class='card'><h2>Map · colored by noise floor (P20)</h2><div id='m'></div><div class='note'>Click dots and squares for details. Needs internet for the street map.</div></div>"
+    + (S.L.stations.length ? "<div class='card'><h2>GO stations · parked baselines</h2><table>" + stnHead + $("stns").innerHTML + "</table><br><img src='" + img("stspec") + "'><div class='legend'>" + $("stLegend").innerHTML + "</div></div>" : "")
+    + "<div class='card'><h2>Noisiest drive spots</h2><table>" + worstHead + $("worst").innerHTML + "</table></div>"
+    + "<div class='card'><h2>Spectrum over the survey</h2><img src='" + img("spec") + "'><div class='note'>red = max hold · blue = power average · grey = minimum</div></div>"
+    + "<div class='card'><h2>Waterfall · frequency vs time</h2><img src='" + img("wf") + "'></div>"
+    + "<div class='card'><h2>Noise floor over time</h2><img src='" + img("tl") + "'><div class='note'>red = peak · amber = median · blue = floor P20 · dotted = MARK</div></div>"
+    + "<div class='note'>Readings are relative and uncalibrated (SX1262 RSSI, 0.5 dB steps). Compare spots against each other and against baseline stations taken with the same antenna setup.</div>"
+    + "</main><script>(" + DRAW_MAP.toString() + ")(L, document.getElementById('m'), " + JSON.stringify(D) + ");<\/script></body></html>";
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([html], {type: "text/html"})); a.download = "rf_survey_report_" + day + ".html";
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+// ------------------------------------------------------------ wiring
+$("aCsv").onchange = async e => { const f = e.target.files[0]; if (!f) return; csvText = await f.text(); gpxText = null; srcLabel = f.name; $("aGpxName").textContent = "optional"; run(); };
+$("aGpx").onchange = async e => { const f = e.target.files[0]; if (!f) return; gpxText = await f.text(); $("aGpxName").textContent = f.name; run(); };
+$("aShift").onchange = run;
+$("aSave").onclick = saveReport;
+$("aPrint").onclick = () => window.print();
+$("aClose").onclick = () => $("report").classList.add("hidden");
+$("btnAnalyze").onclick = () => { if (window.__lastLog) open(window.__lastLog.text, window.__lastLog.name); else { $("report").classList.remove("hidden"); $("aStatus").textContent = "Choose a survey CSV (from Download survey log, the Bluefy page's Save CSV, or the board's Wi-Fi page)."; $("aCsv").click(); } };
+let rt; window.addEventListener("resize", () => { if (S && !$("report").classList.contains("hidden")) { clearTimeout(rt); rt = setTimeout(() => { renderTiles(); renderStations(); renderSpec(); renderWaterfall(); renderTimeline(); }, 200); } });
+return { open };
+})();
+</script>
+</body></html>
